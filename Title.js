@@ -1,0 +1,157 @@
+//2023.05.26
+
+ll.registerPlugin(
+    "Title",
+    "铭记mingji",
+    [1, 0, 0],
+    {}
+);
+
+const configpath = "./plugins/Title/config.json";   //配置文件路径
+let players = new KVDatabase("./plugins/Title/playerdb");
+const defaultconfig = JSON.stringify({  //默认配置文件
+    "DefaultTitle": "§a萌新一只",
+    "ShopMoney": "llmoney"
+});
+const config = data.openConfig(configpath, "json", defaultconfig);    //打开语言文件
+const defaultplayer = {  //玩家数据文件
+    "title": [config.get("DefaultTitle"), '测试', 'a', '测试'],
+    "use": config.get("DefaultTitle")
+};
+/*const defaultshop = {  //商店数据文件
+    "title": tname,
+    "money": money
+};*/
+
+mc.listen("onServerStarted", () => {
+    let cmds = mc.newCommand("titleshop", "§e称号管理", PermType.Any);
+    cmds.setAlias("tsp");
+    cmds.overload();
+    cmds.setCallback((cmd, ori, out, res) => {
+        if (ori.player == null) {
+            return out.error("该命令只能由玩家执行！");
+        }
+        else {
+            main(ori.player)
+        }
+    });
+    cmds.setup();
+});
+
+function main(pl) {
+    let fm = mc.newSimpleForm();
+    fm.setTitle("称号管理");
+    fm.setContent("请选择");
+    fm.addButton("个人管理");
+    fm.addButton("称号商店");
+    if (pl.isOP()) {
+        fm.addButton("管理玩家称号");
+    }
+    pl.sendForm(fm, (pl, id) => {
+        switch (id) {
+            case 0:
+                titeplayer(pl);
+                break;
+            case 1:
+                shop(pl);
+                break;
+            case 2:
+                pl.tell("还没写")
+                break;
+            default:
+                break;
+        }
+    });
+}
+function titeplayer(pl) {
+    let fm = mc.newSimpleForm();
+    let players = new KVDatabase("./plugins/Title/playerdb");
+    let db = players.get(pl.uuid);
+    fm.setTitle("个人管理");
+    fm.setContent("当前使用称号为:" + db.use);
+
+    db.title.sort();
+
+    for (let i = 0; i < db.title.length; i++) {
+        fm.addButton(db.title[i]);
+    }
+    pl.sendForm(fm, (pl, arg) => {
+        if (db.title[arg] == db.use) {
+            pl.tell("当前称号正在使用");
+            return;
+        }
+        if (db.title[arg] != undefined) {
+            let data = {
+                "title": db.title,
+                "use": db.title[arg]
+            };
+            players.set(pl.uuid, data);
+            pl.tell("称号切换成功");
+        }
+        else {
+            pl.tell("未拥有此称号");
+        }
+        return;
+    });
+}
+function shop(pl) {
+    let fm = mc.newSimpleForm();
+    let players = new KVDatabase("./plugins/Title/playerdb");
+    let db = players.get(shop);
+    let player = players.get(pl.uuid);
+    log(db)
+
+    if (!db) {
+        players.set('shop', {});
+    }
+    if (!db.title) {
+        pl.tell("称号商店无数据,快让服主添加几个吧")
+        return
+    }
+    fm.setTitle("称号商店");
+    fm.setContent("请选购");
+
+    db.title.sort();
+    player.title.sort();
+
+    for (let i = 0; i < db.title.length; i++) {
+        fm.addButton(db.title[i]);
+    }
+    pl.sendForm(fm, (pl, arg) => {
+        if (player.title.includes(db.title[arg])) {
+            pl.tell("该称号已拥有,请勿重复购买");
+            return;
+        }
+        if (db.title[arg] != undefined) {
+            let money = money.get(pl.xuid)
+            money.reduce(pl.xuid, money)
+            //log(db.title[arg].money)
+            if (money > db.title[arg].money) {
+                pl.tell("购买成功,以获得" + db.title[arg] + "称号\n消耗金币数量:" + db.title[arg].money)
+            }
+        }
+        else {
+            pl.tell("该称号已下架");
+        }
+        players.close();
+        return;
+    }
+    );
+}
+mc.listen("onJoin", function (pl) {
+    let players = new KVDatabase("./plugins/Title/playerdb");
+    if (pl.isSimulatedPlayer()) return
+    let db = players.get(pl.uuid);
+    if (!db) {
+        players.set(pl.uuid, defaultplayer);
+    }
+    players.close();
+});
+mc.listen("onChat", function (pl, msg) {
+    let players = new KVDatabase("./plugins/Title/playerdb");
+    let db = players.get(pl.uuid);
+    mc.broadcast("[" + db.use + "§r]<" + pl.realName + "§r> " + msg);
+    players.close();
+    return false
+});
+
