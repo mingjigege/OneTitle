@@ -1,4 +1,4 @@
-//2023.05.26
+//先跑起来写完了再重构一下
 
 ll.registerPlugin(
     "Title",
@@ -11,7 +11,7 @@ const configpath = "./plugins/Title/config.json";   //配置文件路径
 let players = new KVDatabase("./plugins/Title/playerdb");   //  打开数据库
 const defaultconfig = JSON.stringify({  //默认配置文件
     "DefaultTitle": "§a萌新一只",
-    "ShopMoney": "llmoney"
+    "ShopMoney": "llmoney"      //计分板经济暂时不需要
 });
 const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
 const defaultplayer = {  //默认玩家数据文件
@@ -168,14 +168,14 @@ function admin(pl) {    //优先
     });
 
 }
-function add(pl) {
+function add(pl) {      //新增称号
     let players = new KVDatabase("./plugins/Title/playerdb");
     let db = players.get("shop");
 }
-function remove(pl) {
+function remove(pl) {       //移除称号
 
 }
-function op(pl) {
+function op(pl) {       //更改称号名字?
 
 }
 mc.listen("onJoin", function (pl) {
@@ -194,3 +194,5 @@ mc.listen("onChat", function (pl, msg) {
     players.close();
     return false;
 });
+
+log("插件加载成功 --- 感谢231项目的支持");
