@@ -13,7 +13,7 @@ const defaultconfig = JSON.stringify({  //默认配置文件
     "DefaultTitle": "§a萌新一只",
     "ShopMoney": "llmoney"
 });
-const config = data.openConfig(configpath, "json", defaultconfig);    //打开语言文件
+const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
 const defaultplayer = {  //玩家数据文件
     "title": [config.get("DefaultTitle"), '测试', 'a', '测试'],
     "use": config.get("DefaultTitle")
@@ -92,7 +92,6 @@ function titeplayer(pl) {
 }
 function shop(pl) {
     let tname = "默认名字";
-    let money = "默认金币";
     let fm = mc.newSimpleForm();
     let players = new KVDatabase("./plugins/Title/playerdb");
     let player = players.get(pl.uuid);
@@ -100,12 +99,12 @@ function shop(pl) {
         "title": tname,
         "money": 1
     };
-    let db = players.get('shop'); // 修复获取商店数据的问题
+    let db = players.get('shop');
     if (!db) {
         players.set('shop', defaultshop);
-        db = defaultshop; // 修复第一次创建商店数据时的数据返回问题
+        db = defaultshop;
     }
-    if (typeof db.title === 'undefined') { // 优化判断 db.title 是否存在
+    if (typeof db.title === 'undefined') {
         pl.tell("称号商店无数据,快让服主添加几个吧");
         return;
     }
@@ -170,7 +169,8 @@ function admin(pl) {
 
 }
 function add(pl) {
-
+    let players = new KVDatabase("./plugins/Title/playerdb");
+    let db = players.get("shop");
 }
 function remove(pl) {
 
@@ -194,4 +194,3 @@ mc.listen("onChat", function (pl, msg) {
     players.close();
     return false
 });
-
