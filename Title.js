@@ -175,7 +175,7 @@ function add(pl) {      //新增称号
 function remove(pl) {       //移除称号
 
 }
-function op(pl) {       //更改称号名字?
+function op(pl) {       //OP更改玩家称号大概功能 新增 移除 修改称号名字？
 
 }
 mc.listen("onJoin", function (pl) {
