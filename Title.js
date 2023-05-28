@@ -8,14 +8,14 @@ ll.registerPlugin(
 );
 
 const configpath = "./plugins/Title/config.json";   //配置文件路径
-let players = new KVDatabase("./plugins/Title/playerdb");
+let players = new KVDatabase("./plugins/Title/playerdb");   //  打开数据库
 const defaultconfig = JSON.stringify({  //默认配置文件
     "DefaultTitle": "§a萌新一只",
     "ShopMoney": "llmoney"
 });
 const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
-const defaultplayer = {  //玩家数据文件
-    "title": [config.get("DefaultTitle"), '测试', 'a', '测试'],
+const defaultplayer = {  //默认玩家数据文件
+    "title": [config.get("DefaultTitle"), '测试', 'a', '测试'],     //默认根据配置文件而定
     "use": config.get("DefaultTitle")
 };
 
@@ -28,13 +28,13 @@ mc.listen("onServerStarted", () => {
             return out.error("该命令只能由玩家执行！");
         }
         else {
-            main(ori.player)
+            main(ori.player);
         }
     });
     cmds.setup();
 });
 
-function main(pl) {
+function main(pl) {     //主表单
     let fm = mc.newSimpleForm();
     fm.setTitle("称号管理");
     fm.setContent("请选择");
@@ -59,7 +59,7 @@ function main(pl) {
         }
     });
 }
-function titeplayer(pl) {
+function titeplayer(pl) {   //个人切换称号
     let fm = mc.newSimpleForm();
     let players = new KVDatabase("./plugins/Title/playerdb");
     let db = players.get(pl.uuid);
@@ -90,7 +90,7 @@ function titeplayer(pl) {
         return;
     });
 }
-function shop(pl) {
+function shop(pl) {     //待完善
     let tname = "默认名字";
     let fm = mc.newSimpleForm();
     let players = new KVDatabase("./plugins/Title/playerdb");
@@ -121,15 +121,15 @@ function shop(pl) {
             return;
         }
         if (db.title[arg] != undefined) {
-            let money = pl.getMoney()
-            log(db[arg].money)
-            log(money)
+            let money = pl.getMoney();
+            log(db[arg].money);
+            log(money);
             if (money > db.title[arg].money) {
-                pl.reduceMoney(money)
+                pl.reduceMoney(money);
                 pl.tell("购买成功,以获得" + db[arg] + "称号\n消耗金币数量:" + db[arg].tmoney)
             }
             else {
-                pl.tell("购买失败,j")
+                pl.tell("购买失败,j");
             }
         }
         else {
@@ -140,7 +140,7 @@ function shop(pl) {
     }
     );
 }
-function admin(pl) {
+function admin(pl) {    //优先
     let fm = mc.newSimpleForm();
     let players = new KVDatabase("./plugins/Title/playerdb");
     let db = players.get(pl.uuid);
@@ -180,7 +180,7 @@ function op(pl) {
 }
 mc.listen("onJoin", function (pl) {
     let players = new KVDatabase("./plugins/Title/playerdb");
-    if (pl.isSimulatedPlayer()) return
+    if (pl.isSimulatedPlayer()) { return };
     let db = players.get(pl.uuid);
     if (!db) {
         players.set(pl.uuid, defaultplayer);
@@ -192,5 +192,5 @@ mc.listen("onChat", function (pl, msg) {
     let db = players.get(pl.uuid);
     mc.broadcast("[" + db.use + "§r]<" + pl.realName + "§r> " + msg);
     players.close();
-    return false
+    return false;
 });
