@@ -38,9 +38,9 @@ function main(pl) {     //主表单
     let fm = mc.newSimpleForm();
     fm.setTitle("称号管理");
     fm.setContent("请选择");
-    fm.addButton("个人管理");
-    fm.addButton("称号商店");
-    if (pl.isOP()) {
+    fm.addButton("个人管理");       //可用
+    fm.addButton("称号商店");       //可用
+    if (pl.isOP()) {        //优先
         fm.addButton("管理玩家称号");
     }
     pl.sendForm(fm, (pl, id) => {
@@ -99,21 +99,16 @@ function shop(pl) {     //待完善
         "title": tname,
         "money": 1
     };
-    let db = players.get('shop');
+    let db = players.get("shop");
     if (!db) {
-        players.set('shop', defaultshop);
+        players.set("shop", defaultshop);
         db = defaultshop;
-    }
-    if (typeof db.title === 'undefined') {
-        pl.tell("称号商店无数据,快让服主添加几个吧");
-        return;
     }
     log(db);
     fm.setTitle("称号商店");
     fm.setContent("请选购");
 
-    player.title.sort();
-    fm.addButton(db.title + " §e价格§d:§r " + db.money);
+    //fm.addButton(options);
 
     pl.sendForm(fm, (pl, arg) => {
         if (player.title.includes(db.title[arg])) {
@@ -124,7 +119,7 @@ function shop(pl) {     //待完善
             let money = pl.getMoney();
             log(db[arg].money);
             log(money);
-            if (money > db.title[arg].money) {
+            if (money >= db.title[arg].money) {
                 pl.reduceMoney(money);
                 pl.tell("购买成功,以获得" + db[arg] + "称号\n消耗金币数量:" + db[arg].tmoney)
             }
@@ -168,9 +163,25 @@ function admin(pl) {    //优先
     });
 
 }
-function add(pl) {      //新增称号
-    let players = new KVDatabase("./plugins/Title/playerdb");
-    let db = players.get("shop");
+function add(pl) {
+    const players = new KVDatabase("./plugins/Title/playerdb");
+    const db = players.get("shop") || [];
+    log(db);
+    const fm = mc.newCustomForm();
+    fm.addInput("称号昵称", "", "请输入");
+    fm.addInput("所需金币数量", "", "请输入");
+    pl.sendForm(fm, (pl, dt) => {
+        if (dt == null) return;
+        const [title, money] = dt;
+        if (!title) {
+            pl.tell("未输入称号昵称");
+            return;
+        }
+        const newItem = { title, money };
+        db.push(newItem);
+        players.set("shop", db);
+        log(db);
+    });
 }
 function remove(pl) {       //移除称号
 
@@ -195,4 +206,4 @@ mc.listen("onChat", function (pl, msg) {
     return false;
 });
 
-log("插件加载成功 --- 感谢231项目的支持");
+log("插件加载成功 - - - 感谢231项目的支持");
