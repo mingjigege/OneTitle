@@ -1,5 +1,3 @@
-//先跑起来写完了再重构一下
-
 ll.registerPlugin(
     "Title",
     "铭记mingji",
@@ -8,24 +6,19 @@ ll.registerPlugin(
 );
 
 const configpath = "./plugins/Title/config.json";   //配置文件路径
-let players = new KVDatabase("./plugins/Title/playerdb");   // 打开数据库
 const defaultconfig = JSON.stringify({  //默认配置文件
     "DefaultTitle": "§a萌新一只",
     "ShopMoney": "llmoney"      //计分板经济暂时不需要
 });
 const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
-const defaultplayer = {  //默认玩家数据文件
-    "title": [config.get("DefaultTitle")]     //默认根据配置文件而定
-};
-const defaultuse = {
-    "use": config.get("DefaultTitle")
-};
 
 mc.listen("onServerStarted", () => {
     let cmds = mc.newCommand("titleshop", "§e称号管理", PermType.Any);
+
     cmds.setAlias("tsp");
     cmds.overload();
     cmds.setCallback((cmd, ori, out, res) => {
+
         if (ori.player == null) {
             return out.error("该命令只能由玩家执行！");
         }
@@ -42,9 +35,11 @@ function main(pl) {     //主表单
     fm.setContent("请选择");
     fm.addButton("个人称号切换");
     fm.addButton("全局称号商店");
+
     if (pl.isOP()) {
         fm.addButton("管理玩家称号");
     }
+
     pl.sendForm(fm, (pl, id) => {
         switch (id) {
             case 0:
@@ -71,13 +66,13 @@ function titeplayer(pl) {   //个人切换称号
     fm.setTitle("个人管理");
     fm.setContent("当前使用称号为:" + use.use);
 
-    db.title.sort();
+    //db.title.sort();
+    db.forEach(i => {
+        fm.addButton(`${i.title}}`);
+    });
 
-    for (let i = 0; i < db.title.length; i++) {
-        fm.addButton(db.title[i]);
-    }
     pl.sendForm(fm, (pl, arg) => {
-        if (db.title[arg] == db.use) {
+        if (db.title[arg] == db[use]) {
             pl.tell("当前称号正在使用");
             return;
         }
@@ -90,33 +85,36 @@ function titeplayer(pl) {   //个人切换称号
         }
     });
 }
-function shop(pl) {     //待完善
+function shop(pl) {    
     let fm = mc.newSimpleForm();
     let players = new KVDatabase("./plugins/Title/playerdb");
-    let player = players.get(pl.uuid);  //玩家数据
-    let defaultshop = []  // 商店数据文件;
+    let player = players.get(pl.uuid);  
     let db = players.get("shop");
+
     if (!db) {
-        players.set("shop", defaultshop);
+        db = [];
+        players.set("shop", db);
         pl.tell('商店无数据,快让管理员添加吧');
         return;
     }
-    log(db);
+
     fm.setTitle("称号商店");
     fm.setContent("请选购");
+
     db.forEach(i => {
         fm.addButton(`${i.title}\n价格:${i.money}`);
     });
 
     pl.sendForm(fm, (pl, id) => {
         let moneys = pl.getMoney();
+        let moneyred = parseInt(db[id].money.toString());
+
         if (id == null) return;
-        log(moneys)
-        log(db[id].money)
-        if (moneys > db[id].money) {
+
+        if (moneys > moneyred) {
             if (!player[db[id].title]) {
-                if (db[id].money != 0) {
-                    let item = pl.reduceMoney(db[id].money);
+                if (moneyred != 0) {
+                    money.reduce(pl.xuid, moneyred)
                 }
                 pl.tell('购买成功');
                 player.push({
@@ -164,18 +162,22 @@ function admin(pl) {    //优先
 }
 function add(pl) {  //添加称号
     let players = new KVDatabase("./plugins/Title/playerdb");
-    let defaultshop = []  //商店数据文件;
     let db = players.get("shop");
+
     if (!db) {
-        players.set("shop", defaultshop);
-        db = defaultshop;
+        db = [];
+        players.set("shop", db);
     }
     const fm = mc.newCustomForm();
+
     fm.addInput("称号昵称", "", "请输入");
     fm.addInput("所需金币数量", "string");
+
     pl.sendForm(fm, (pl, dt) => {
         if (dt == null) return;
+
         const [title, money] = dt;
+
         if (!title) {
             pl.tell("未输入称号昵称");
             return;
@@ -184,7 +186,6 @@ function add(pl) {  //添加称号
             pl.tell("未输入称号所需金币");
             return;
         }
-        log(isNaN(Number(money, 10)))
         if (isNaN(Number(money, 10)) && money != 0) {
             pl.tell("金币请写为数字");
             return;
@@ -204,15 +205,29 @@ function op(pl) {       //OP更改玩家称号大概功能 新增 移除 修改�
 }
 mc.listen("onJoin", function (pl) {
     let players = new KVDatabase("./plugins/Title/playerdb");
+
     if (pl.isSimulatedPlayer()) { return };
+
     let db = players.get(pl.uuid);
+    let dbs = players.get(pl.xuid);
+
     if (!db) {
-        players.set(pl.uuid, defaultplayer);
-        players.set(pl.xuid, defaultuse);
+        db = [];
+        db.push({
+            "title": config.get("DefaultTitle")
+        });
+        players.set(pl.uuid, db);
     }
-    log(db)
+    if (!dbs) {
+        dbs = [];
+        dbs.push({
+            "ues": config.get("DefaultTitle")
+        });
+        players.set(pl.xuid, dbs);
+    }
     players.close();
 });
+
 mc.listen("onChat", function (pl, msg) {
     let players = new KVDatabase("./plugins/Title/playerdb");
     let db = players.get(pl.xuid);
