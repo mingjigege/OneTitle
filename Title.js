@@ -4,6 +4,9 @@
 然后就是重复部分搞function 尽量少读取数据库配置文件中的重复内容
 function再改成nodejs多文件
 */
+// LiteLoader-AIDS automatic generated
+/// <reference path="d:\LLSETEST/dts/HelperLib-master/src/index.d.ts"/> 
+
 ll.registerPlugin(
     "Title",        //直接title其实有一点奇怪，不知道要不要改一下 确实可以改改其他名字这个不好听
     "铭记mingji",
@@ -146,9 +149,9 @@ function admin(pl) {
 
     fm.setTitle("§1§l管理商店数据");
     fm.setContent("§c欢迎管理员" + pl.realName);
-    fm.addButton("§a新增称号");
-    fm.addButton("§c删除称号");
-    //这里要写一个修改商店数据吗
+    fm.addButton("§a新增称号","textures/ui/dark_plus");
+    fm.addButton("§c删除称号","textures/ui/crossout");
+    //这里要写一个修改商店数据吗 搞一个吧
 
     pl.sendForm(fm, (pl, id) => {
         switch (id) {
@@ -159,6 +162,7 @@ function admin(pl) {
                 remove(pl);
                 break;
             default:
+                main(pl);
                 break;
         }
     });
@@ -171,13 +175,16 @@ function add(pl) {  //添加称号
     }
 
     let fm = mc.newCustomForm();
+    fm.setTitle("§l§1添加称号");
     fm.addInput("称号昵称", "请输入");
-    fm.addInput("所需金币数量", "string");
+    fm.addInput("所需金币数量", "number");//这个地方改一下改成数字
 
     pl.sendForm(fm, (pl, dt) => {
+        if (dt==null) {
+            admin(pl)//搞个x返回
+            return;
+        };//位置有点问题
         let [title, money] = dt;
-
-        if (dt == null) return;
         if (!title) {
             pl.tell("未输入称号昵称");
             return;
@@ -290,7 +297,7 @@ mc.listen("onJoin", function (pl) {
     }
 
     if (!players.hasOwnProperty(pl.xuid)) {
-        log(pl.RealName + '首次进入给予初始称号' + DefaultTitle);
+        log(pl.realName + '首次进入给予初始称号' + DefaultTitle);
         players[pl.xuid] = [];
         players[pl.xuid].push({
             "use": DefaultTitle
