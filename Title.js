@@ -1,5 +1,11 @@
+/*
+有建议的话可以写这里
+表单那些我记得小鼠有个lib来着应该比较方便
+然后就是重复部分搞function 尽量少读取数据库配置文件中的重复内容
+function再改成nodejs多文件
+*/
 ll.registerPlugin(
-    "Title",//直接title其实有一点奇怪，不知道要不要改一下
+    "Title",        //直接title其实有一点奇怪，不知道要不要改一下 确实可以改改其他名字这个不好听
     "铭记mingji",
     [1, 0, 0],
     {}
@@ -7,11 +13,14 @@ ll.registerPlugin(
 
 const configpath = "./plugins/Title/config.json";   //配置文件路径
 const defaultconfig = JSON.stringify({  //默认配置文件
+    "EnabledChat": true,
     "DefaultTitle": "§a萌新一只"
-    //"ShopMoney": "llmoney",
+    //预留 购买称号是否全服通知
+    //"ShopMoney": "llmoney",   下面这两个预留计分板经济
     //"ScoreName": "money"     
 });
 const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
+let EnabledChat = config.get("EnabledChat");        //获取是否启动聊天功能
 let db = new KVDatabase("./plugins/Title/playerdb");       //打开数据库
 log("数据库打开成功")
 
@@ -35,12 +44,12 @@ function main(pl) {     //主表单
     let fm = mc.newSimpleForm();
     fm.setTitle("§1§l称号管理");//我建议一下表单title§1加粗
     fm.setContent("§c请选择");//文字部分§c红色不加粗
-    fm.addButton("§e§l个人称号切换","textures/ui/trade_icon");//这个地方可以加图片的
-    fm.addButton("§a§l全局称号商店","textures/ui/MCoin");//必要时候换行描述一下看看
-//顺便建议写一点注释
+    fm.addButton("§e§l个人称号切换", "textures/ui/trade_icon");//这个地方可以加图片的
+    fm.addButton("§a§l全局称号商店", "textures/ui/MCoin");//必要时候换行描述一下看看
+    //顺便建议写一点注释
     if (pl.isOP()) {
-        fm.addButton("§l管理商店数据","textures/ui/timer");
-        fm.addButton("§c§l管理玩家数据","textures/ui/op");
+        fm.addButton("§l管理商店数据", "textures/ui/timer");
+        fm.addButton("§c§l管理玩家数据", "textures/ui/op");
     }
 
     pl.sendForm(fm, (pl, id) => {
@@ -139,6 +148,7 @@ function admin(pl) {
     fm.setContent("§c欢迎管理员" + pl.realName);
     fm.addButton("§a新增称号");
     fm.addButton("§c删除称号");
+    //这里要写一个修改商店数据吗
 
     pl.sendForm(fm, (pl, id) => {
         switch (id) {
@@ -161,7 +171,7 @@ function add(pl) {  //添加称号
     }
 
     let fm = mc.newCustomForm();
-    fm.addInput("称号昵称", "", "请输入");
+    fm.addInput("称号昵称", "请输入");
     fm.addInput("所需金币数量", "string");
 
     pl.sendForm(fm, (pl, dt) => {
@@ -222,9 +232,9 @@ function op(pl) {       //OP更改玩家称号大概功能 新增 移除 修改�
 
     fm.setTitle("§1§l管理玩家称号");
     fm.setContent("§c欢迎管理员" + pl.realName);
-    fm.addButton("§1管理在线玩家","textures/ui/icon_steve");
-    fm.addButton("§2管理全部玩家","textures/ui/multiplayer_glyph_color");
-    fm.addButton("§3搜索玩家昵称","textures/ui/magnifyingGlass");
+    fm.addButton("§1管理在线玩家", "textures/ui/icon_steve");
+    fm.addButton("§2管理全部玩家", "textures/ui/multiplayer_glyph_color");
+    fm.addButton("§3搜索玩家昵称", "textures/ui/magnifyingGlass");
 
     pl.sendForm(fm, (pl, id) => {
         switch (id) {
@@ -280,8 +290,7 @@ mc.listen("onJoin", function (pl) {
     }
 
     if (!players.hasOwnProperty(pl.xuid)) {
-        log(players.hasOwnProperty(pl.xuid))
-        log('error')
+        log(pl.RealName + '首次进入给予初始称号' + DefaultTitle);
         players[pl.xuid] = [];
         players[pl.xuid].push({
             "use": DefaultTitle
@@ -290,13 +299,14 @@ mc.listen("onJoin", function (pl) {
         pl.tell('§d[§eTitle§d] §r您已获得初始称号§r"' + players[pl.xuid][0].use + '§r" 输入 /tsp 即可管理称号');
     }
 });
-/*
+
 mc.listen("onChat", function (pl, msg) {
+    if (EnabledChat != true) { return; }
     let use = title(pl);
     mc.broadcast("[" + use + "§r] <" + pl.realName + "§r> " + msg);
     return false;
 });
-*/
+
 ll.exports(title, "Title", "TitleMsg");
 
 log("插件加载成功 - - - 感谢231项目的支持");
