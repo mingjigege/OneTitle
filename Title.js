@@ -34,7 +34,9 @@ mc.listen("onServerStarted", () => {
     cmds.setCallback((cmd, ori, out, res) => {
 
         if (ori.player == null) {
-            return out.error("该命令只能由玩家执行！");
+            let EnabledChat = config.get("EnabledChat"); 
+            //return out.error("该命令只能由玩家执行！");
+            return out.success("配置文件已重载");//设置重载,这个没啥用
         }
         else {
             main(ori.player);
@@ -276,8 +278,8 @@ function title(pl) {     //获取玩家使用称号用于导出API
     }
 
 }
-mc.listen("onJoin", function (pl) {
-    if (pl.isSimulatedPlayer()) { return; }
+mc.listen("onJoin", (pl)=> {
+    if (pl.isSimulatedPlayer()) { return true; }
 
     let DefaultTitle = config.get("DefaultTitle");
     let player = db.get(pl.xuid);
@@ -308,6 +310,7 @@ mc.listen("onJoin", function (pl) {
 });
 
 mc.listen("onChat", (pl, msg)=> {//这个我改一下
+    if (pl.isSimulatedPlayer()) { return true; }
     if (EnabledChat){
     let use = title(pl);
     mc.broadcast("[" + use + "§r] <" + pl.realName + "§r> " + msg);
