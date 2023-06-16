@@ -1,5 +1,5 @@
 ll.registerPlugin(
-    "Title",
+    "Title",//直接title其实有一点奇怪，不知道要不要改一下
     "铭记mingji",
     [1, 0, 0],
     {}
@@ -33,14 +33,14 @@ mc.listen("onServerStarted", () => {
 
 function main(pl) {     //主表单
     let fm = mc.newSimpleForm();
-    fm.setTitle("称号管理");
-    fm.setContent("请选择");
-    fm.addButton("个人称号切换");
-    fm.addButton("全局称号商店");
-
+    fm.setTitle("§1§l称号管理");//我建议一下表单title§1加粗
+    fm.setContent("§c请选择");//文字部分§c红色不加粗
+    fm.addButton("个人称号切换","textures/ui/trade_icon");//这个地方可以加图片的
+    fm.addButton("全局称号商店","textures/ui/MCoin");//必要时候换行描述一下看看
+//顺便建议写一点注释
     if (pl.isOP()) {
-        fm.addButton("管理商店数据");
-        fm.addButton("管理玩家数据");
+        fm.addButton("管理商店数据","textures/ui/timer");
+        fm.addButton("管理玩家数据","textures/ui/op");
     }
 
     pl.sendForm(fm, (pl, id) => {
@@ -67,8 +67,8 @@ function titeplayer(pl) {   //个人切换称号
     let players = db.get(pl.xuid);
     let fm = mc.newSimpleForm();
 
-    fm.setTitle("个人管理");
-    fm.setContent("当前使用称号为:" + player[pl.xuid][0].use);
+    fm.setTitle("§1§l个人管理");
+    fm.setContent("§c当前使用称号为:" + player[pl.xuid][0].use);
 
     players.forEach(i => {
         fm.addButton(`${i.title}`);
@@ -103,8 +103,8 @@ function shop(pl) {
         return;
     }
 
-    fm.setTitle("称号商店");
-    fm.setContent("请选购");
+    fm.setTitle("§1§l称号商店");
+    fm.setContent("§c请选购");
 
     shop.forEach(i => {
         fm.addButton(`${i.title}\n价格:${i.money}`);
@@ -135,8 +135,8 @@ function shop(pl) {
 function admin(pl) {
     let fm = mc.newSimpleForm();
 
-    fm.setTitle("管理商店数据");
-    fm.setContent("欢迎管理员" + pl.realName);
+    fm.setTitle("§1§l管理商店数据");
+    fm.setContent("§c欢迎管理员" + pl.realName);
     fm.addButton("新增称号");
     fm.addButton("删除称号");
 
