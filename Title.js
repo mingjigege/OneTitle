@@ -75,6 +75,7 @@ function titeplayer(pl) {   //个人切换称号
     });
 
     pl.sendForm(fm, (pl, id) => {
+        if (id == null) { return };
         if (players[id].title == player[pl.xuid][0].use) {
             pl.tell("当前称号正在使用");
             return;
@@ -156,7 +157,7 @@ function add(pl) {  //添加称号
     let shop = db.get("shop");
 
     if (!shop) {
-        shop = {};
+        shop = [];
     }
 
     let fm = mc.newCustomForm();
@@ -164,10 +165,9 @@ function add(pl) {  //添加称号
     fm.addInput("所需金币数量", "string");
 
     pl.sendForm(fm, (pl, dt) => {
-        if (dt == null) return;
-
         let [title, money] = dt;
 
+        if (dt == null) return;
         if (!title) {
             pl.tell("未输入称号昵称");
             return;
@@ -184,6 +184,7 @@ function add(pl) {  //添加称号
             "title": title,
             "money": money
         });
+        pl.tell('§d[§eTitle§d] §r称号"' + title + '§r"上架成功');
         db.set('shop', shop);
     });
 }
@@ -260,10 +261,8 @@ function title(pl) {     //获取玩家使用称号用于导出API
 }
 mc.listen("onJoin", function (pl) {
     if (pl.isSimulatedPlayer()) { return; }
-    let DefaultTitle = config.get("DefaultTitle");
-    //db.delete(pl.xuid)
-    //db.delete('use')
 
+    let DefaultTitle = config.get("DefaultTitle");
     let player = db.get(pl.xuid);
 
     if (!player) {
@@ -276,11 +275,13 @@ mc.listen("onJoin", function (pl) {
     let players = db.get('use');
 
     if (!players) {
-        players = {};
+        players = [];
         db.set('use', players);
     }
 
     if (!players.hasOwnProperty(pl.xuid)) {
+        log(players.hasOwnProperty(pl.xuid))
+        log('error')
         players[pl.xuid] = [];
         players[pl.xuid].push({
             "use": DefaultTitle
@@ -289,11 +290,13 @@ mc.listen("onJoin", function (pl) {
         pl.tell('§d[§eTitle§d] §r您已获得初始称号§r"' + players[pl.xuid][0].use + '§r" 输入 /tsp 即可管理称号');
     }
 });
-
+/*
 mc.listen("onChat", function (pl, msg) {
     let use = title(pl);
     mc.broadcast("[" + use + "§r] <" + pl.realName + "§r> " + msg);
     return false;
 });
+*/
+ll.exports(title, "Title", "TitleMsg");
 
 log("插件加载成功 - - - 感谢231项目的支持");
