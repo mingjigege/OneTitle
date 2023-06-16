@@ -307,13 +307,16 @@ mc.listen("onJoin", function (pl) {
     }
 });
 
-mc.listen("onChat", function (pl, msg) {
-    if (EnabledChat != true) { return; }
+mc.listen("onChat", (pl, msg)=> {//这个我改一下
+    if (EnabledChat){
     let use = title(pl);
     mc.broadcast("[" + use + "§r] <" + pl.realName + "§r> " + msg);
     return false;
+    }
+    else{
+        return true;
+    }
 });
-
 ll.exports(title, "Title", "TitleMsg");
 
 log("插件加载成功 - - - 感谢231项目的支持");
