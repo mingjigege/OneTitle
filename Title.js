@@ -35,12 +35,12 @@ function main(pl) {     //主表单
     let fm = mc.newSimpleForm();
     fm.setTitle("§1§l称号管理");//我建议一下表单title§1加粗
     fm.setContent("§c请选择");//文字部分§c红色不加粗
-    fm.addButton("个人称号切换","textures/ui/trade_icon");//这个地方可以加图片的
-    fm.addButton("全局称号商店","textures/ui/MCoin");//必要时候换行描述一下看看
+    fm.addButton("§e§l个人称号切换","textures/ui/trade_icon");//这个地方可以加图片的
+    fm.addButton("§a§l全局称号商店","textures/ui/MCoin");//必要时候换行描述一下看看
 //顺便建议写一点注释
     if (pl.isOP()) {
-        fm.addButton("管理商店数据","textures/ui/timer");
-        fm.addButton("管理玩家数据","textures/ui/op");
+        fm.addButton("§l管理商店数据","textures/ui/timer");
+        fm.addButton("§c§l管理玩家数据","textures/ui/op");
     }
 
     pl.sendForm(fm, (pl, id) => {
@@ -137,8 +137,8 @@ function admin(pl) {
 
     fm.setTitle("§1§l管理商店数据");
     fm.setContent("§c欢迎管理员" + pl.realName);
-    fm.addButton("新增称号");
-    fm.addButton("删除称号");
+    fm.addButton("§a新增称号");
+    fm.addButton("§c删除称号");
 
     pl.sendForm(fm, (pl, id) => {
         switch (id) {
@@ -197,8 +197,8 @@ function remove(pl) {       //移除称号
         return;
     }
 
-    fm.setTitle("移除称号");
-    fm.setContent("请选择");
+    fm.setTitle("§1§l移除称号");
+    fm.setContent("§c请选择");
 
     shop.forEach(i => {
         fm.addButton(`${i.title}`);
@@ -220,11 +220,11 @@ function remove(pl) {       //移除称号
 function op(pl) {       //OP更改玩家称号大概功能 新增 移除 修改称号名字？
     let fm = mc.newSimpleForm();
 
-    fm.setTitle("管理玩家称号");
-    fm.setContent("欢迎管理员" + pl.realName);
-    fm.addButton("管理在线玩家");
-    fm.addButton("管理全部玩家");
-    fm.addButton("搜索玩家昵称");
+    fm.setTitle("§1§l管理玩家称号");
+    fm.setContent("§c欢迎管理员" + pl.realName);
+    fm.addButton("§1管理在线玩家","textures/ui/icon_steve");
+    fm.addButton("§2管理全部玩家","textures/ui/multiplayer_glyph_color");
+    fm.addButton("§3搜索玩家昵称","textures/ui/magnifyingGlass");
 
     pl.sendForm(fm, (pl, id) => {
         switch (id) {
