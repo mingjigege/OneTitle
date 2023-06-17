@@ -129,7 +129,7 @@ function shop(pl) {
 
         //let moneys = pl.getMoney();
         let moneys=Economy.get(pl);
-        let moneyred = parseInt(shop[id].money.toString());//这个地方为啥是string啊
+        let moneyred = parseInt(shop[id].money);
 
         if (moneys >= moneyred) {
             if (moneyred != 0) {
@@ -137,7 +137,7 @@ function shop(pl) {
                 Economy.reduce(pl,moneyred)
             }
 
-            pl.tell('购买成功');
+            pl.tell('购买成功');//这个地方可以重复购买这个很糟糕，然后购买前得加个是否购买的确认表单
             player.push({
                 "title": shop[id].title
             });
