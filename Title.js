@@ -4,27 +4,29 @@
 然后就是重复部分搞function 尽量少读取数据库配置文件中的重复内容
 function再改成nodejs多文件
 */
-
-ll.registerPlugin(
-    "Title",        //直接title其实有一点奇怪，不知道要不要改一下 确实可以改改其他名字这个不好听
-    "铭记mingji,EpsilonZunsat",
-    [1, 0, 0],
-    {}
-);
-
+// LiteLoader-AIDS automatic generated
+/// <reference path="d:\LLSETEST/dts/HelperLib-master/src/index.d.ts"/> 
+//这个上面的不删，方便我写点补全
+const PLUGIN_NAME="Title";
+const Register=require("./lib/Register.js");
+Register.info(PLUGIN_NAME, "称号插件",[0,0,1,Version.Dev],{
+    Author:"铭记mingji,EpsilonZunsat" 
+});//修改一些依赖文件
 const configpath = "./plugins/Title/config.json";   //配置文件路径
+//这个地方使用gmoney来加入多经济支持,计分板经济支持
+const gmoney=require("./lib/gmoney.js");
 const defaultconfig = JSON.stringify({  //默认配置文件
     "EnabledChat": true,
-    "DefaultTitle": "§a萌新一只"
+    "DefaultTitle": "§a萌新一只",
+    "economy_type":"llmoney",
+    "economy_name":"money"
     //预留 购买称号是否全服通知
-    //"ShopMoney": "llmoney",   下面这两个预留计分板经济
-    //"ScoreName": "money"     
 });
 const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
 let EnabledChat = config.get("EnabledChat");        //获取是否启动聊天功能
+const Economy=new gmoney(config.get("economy_type"),config.get("economy_name"));//获取经济单位
 let db = new KVDatabase("./plugins/Title/playerdb");       //打开数据库
-log("数据库打开成功")
-
+log("数据库打开成功")//这个调试口到时候统一上面写个调试内容
 mc.listen("onServerStarted", () => {
     let cmds = mc.newCommand("titleshop", "§e称号管理       ---§bTitle", PermType.Any);
     cmds.setAlias("tsp");
@@ -125,12 +127,14 @@ function shop(pl) {
     pl.sendForm(fm, (pl, id) => {
         if (id == null) { return };
 
-        let moneys = pl.getMoney();
-        let moneyred = parseInt(shop[id].money.toString());
+        //let moneys = pl.getMoney();
+        let moneys=Economy.get(pl);
+        let moneyred = parseInt(shop[id].money.toString());//这个地方为啥是string啊
 
         if (moneys >= moneyred) {
             if (moneyred != 0) {
-                money.reduce(pl.xuid, moneyred)
+                //money.reduce(pl.xuid, moneyred)
+                Economy.reduce(pl,moneyred)
             }
 
             pl.tell('购买成功');
