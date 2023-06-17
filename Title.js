@@ -4,12 +4,10 @@
 然后就是重复部分搞function 尽量少读取数据库配置文件中的重复内容
 function再改成nodejs多文件
 */
-// LiteLoader-AIDS automatic generated
-/// <reference path="d:\LLSETEST/dts/HelperLib-master/src/index.d.ts"/> 
 
 ll.registerPlugin(
     "Title",        //直接title其实有一点奇怪，不知道要不要改一下 确实可以改改其他名字这个不好听
-    "铭记mingji",
+    "铭记mingji,EpsilonZunsat",
     [1, 0, 0],
     {}
 );
@@ -34,7 +32,7 @@ mc.listen("onServerStarted", () => {
     cmds.setCallback((cmd, ori, out, res) => {
 
         if (ori.player == null) {
-            let EnabledChat = config.get("EnabledChat"); 
+            let EnabledChat = config.get("EnabledChat");
             //return out.error("该命令只能由玩家执行！");
             return out.success("配置文件已重载");//设置重载,这个没啥用
         }
@@ -151,8 +149,8 @@ function admin(pl) {
 
     fm.setTitle("§1§l管理商店数据");
     fm.setContent("§c欢迎管理员" + pl.realName);
-    fm.addButton("§a新增称号","textures/ui/dark_plus");
-    fm.addButton("§c删除称号","textures/ui/crossout");
+    fm.addButton("§a新增称号", "textures/ui/dark_plus");
+    fm.addButton("§c删除称号", "textures/ui/crossout");
     //这里要写一个修改商店数据吗 搞一个吧
 
     pl.sendForm(fm, (pl, id) => {
@@ -182,7 +180,7 @@ function add(pl) {  //添加称号
     fm.addInput("所需金币数量", "number");//这个地方改一下改成数字
 
     pl.sendForm(fm, (pl, dt) => {
-        if (dt==null) {
+        if (dt == null) {
             admin(pl)//搞个x返回
             return;
         };//位置有点问题
@@ -278,8 +276,10 @@ function title(pl) {     //获取玩家使用称号用于导出API
     }
 
 }
-mc.listen("onJoin", (pl)=> {
+mc.listen("onJoin", (pl) => {
     if (pl.isSimulatedPlayer()) { return true; }
+    //db.delete(pl.xuid);       //调试使用
+    //db.delete('use');
 
     let DefaultTitle = config.get("DefaultTitle");
     let player = db.get(pl.xuid);
@@ -294,7 +294,7 @@ mc.listen("onJoin", (pl)=> {
     let players = db.get('use');
 
     if (!players) {
-        players = [];
+        players = {};
         db.set('use', players);
     }
 
@@ -307,16 +307,20 @@ mc.listen("onJoin", (pl)=> {
         db.set('use', players);
         pl.tell('§d[§eTitle§d] §r您已获得初始称号§r"' + players[pl.xuid][0].use + '§r" 输入 /tsp 即可管理称号');
     }
+    /*let a = db.get('use');
+    let aa = db.get(pl.xuid);
+    log(a)
+    log(aa)*/
 });
 
-mc.listen("onChat", (pl, msg)=> {//这个我改一下
+mc.listen("onChat", (pl, msg) => {      //这个我改一下        静音问题先记录以下
     if (pl.isSimulatedPlayer()) { return true; }
-    if (EnabledChat){
-    let use = title(pl);
-    mc.broadcast("[" + use + "§r] <" + pl.realName + "§r> " + msg);
-    return false;
+    if (EnabledChat) {
+        let use = title(pl);
+        mc.broadcast("[" + use + "§r] <" + pl.realName + "§r> " + msg);
+        return false;
     }
-    else{
+    else {
         return true;
     }
 });
