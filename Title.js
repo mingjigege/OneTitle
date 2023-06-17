@@ -7,24 +7,24 @@ function再改成nodejs多文件
 // LiteLoader-AIDS automatic generated
 /// <reference path="d:\LLSETEST/dts/HelperLib-master/src/index.d.ts"/> 
 //这个上面的不删，方便我写点补全
-const PLUGIN_NAME="Title";
-const Register=require("./lib/Register.js");
-Register.info(PLUGIN_NAME, "称号插件",[0,0,1,Version.Dev],{
-    Author:"铭记mingji,EpsilonZunsat" 
+const PLUGIN_NAME = "Title";
+const Register = require("./lib/Register.js");
+Register.info(PLUGIN_NAME, "称号插件", [0, 0, 1, Version.Dev], {
+    Author: "铭记mingji,EpsilonZunsat"
 });//修改一些依赖文件
 const configpath = "./plugins/Title/config.json";   //配置文件路径
 //这个地方使用gmoney来加入多经济支持,计分板经济支持
-const gmoney=require("./lib/gmoney.js");
+const gmoney = require("./lib/gmoney.js");
 const defaultconfig = JSON.stringify({  //默认配置文件
     "EnabledChat": true,
     "DefaultTitle": "§a萌新一只",
-    "economy_type":"llmoney",
-    "economy_name":"money"
+    "economy_type": "llmoney",
+    "economy_name": "money"
     //预留 购买称号是否全服通知
 });
 const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
 let EnabledChat = config.get("EnabledChat");        //获取是否启动聊天功能
-const Economy=new gmoney(config.get("economy_type"),config.get("economy_name"));//获取经济单位
+const Economy = new gmoney(config.get("economy_type"), config.get("economy_name"));//获取经济单位
 let db = new KVDatabase("./plugins/Title/playerdb");       //打开数据库
 log("数据库打开成功")//这个调试口到时候统一上面写个调试内容
 mc.listen("onServerStarted", () => {
@@ -127,16 +127,20 @@ function shop(pl) {
     pl.sendForm(fm, (pl, id) => {
         if (id == null) { return };
 
-        //let moneys = pl.getMoney();
-        let moneys=Economy.get(pl);
+        let moneys = pl.getMoney();
+        //let moneys = Economy.get(pl);     //这个我先注释一下
         let moneyred = parseInt(shop[id].money);
+        let targetObj = player.find(obj => obj.title == shop[id].title);
 
+        if (targetObj) {
+            pl.tell('购买失败,请勿重复购买');
+            return;
+        }
         if (moneys >= moneyred) {
             if (moneyred != 0) {
-                //money.reduce(pl.xuid, moneyred)
-                Economy.reduce(pl,moneyred)
+                //money.reduce(pl.xuid, moneyred);
+                Economy.reduce(pl, moneyred);
             }
-
             pl.tell('购买成功');//这个地方可以重复购买这个很糟糕，然后购买前得加个是否购买的确认表单
             player.push({
                 "title": shop[id].title
@@ -184,11 +188,11 @@ function add(pl) {  //添加称号
     fm.addInput("所需金币数量", "number");//这个地方改一下改成数字
 
     pl.sendForm(fm, (pl, dt) => {
+        let [title, money] = dt;
         if (dt == null) {
             admin(pl)//搞个x返回
             return;
-        };//位置有点问题
-        let [title, money] = dt;
+        };
         if (!title) {
             pl.tell("未输入称号昵称");
             return;
@@ -311,10 +315,10 @@ mc.listen("onJoin", (pl) => {
         db.set('use', players);
         pl.tell('§d[§eTitle§d] §r您已获得初始称号§r"' + players[pl.xuid][0].use + '§r" 输入 /tsp 即可管理称号');
     }
-    /*let a = db.get('use');
+    let a = db.get('use');
     let aa = db.get(pl.xuid);
     log(a)
-    log(aa)*/
+    log(aa)
 });
 
 mc.listen("onChat", (pl, msg) => {      //这个我改一下        静音问题先记录以下
