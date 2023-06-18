@@ -22,6 +22,7 @@ const defaultconfig = JSON.stringify({  //默认配置文件
     "economy_name": "money"
     //预留 购买称号是否全服通知
 });
+const SimpleFormCallback = require("./lib/SimpleFormCallback.js");
 const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
 let EnabledChat = config.get("EnabledChat");        //获取是否启动聊天功能
 const Economy = new gmoney(config.get("economy_type"), config.get("economy_name"));//获取经济单位
@@ -45,7 +46,7 @@ mc.listen("onServerStarted", () => {
     cmds.setup();
 });
 
-function main(pl) {     //主表单
+function main(pl) {     //主表单，这个经常要改我就不动了
     let fm = mc.newSimpleForm();
     fm.setTitle("§1§l称号管理");//我建议一下表单title§1加粗
     fm.setContent("§c请选择");//文字部分§c红色不加粗
@@ -153,27 +154,13 @@ function shop(pl) {
     })
 }
 function admin(pl) {
-    let fm = mc.newSimpleForm();
-
-    fm.setTitle("§1§l管理商店数据");
-    fm.setContent("§c欢迎管理员" + pl.realName);
-    fm.addButton("§a新增称号", "textures/ui/dark_plus");
-    fm.addButton("§c删除称号", "textures/ui/crossout");
+    //引入依赖
+    let fm=new SimpleFormCallback("§1§l管理商店数据","§c欢迎管理员" + pl.realName);
+    fm.addButton("返回",()=>{main(pl)},"textures/ui/arrow_icon")
+    fm.addButton("§a新增称号",()=>{add(pl)}, "textures/ui/dark_plus");
+    fm.addButton("§c删除称号",()=>{remove(pl)}, "textures/ui/crossout");
+    fm.send(pl);
     //这里要写一个修改商店数据吗 搞一个吧
-
-    pl.sendForm(fm, (pl, id) => {
-        switch (id) {
-            case 0:
-                add(pl);
-                break;
-            case 1:
-                remove(pl);
-                break;
-            default:
-                main(pl);
-                break;
-        }
-    });
 }
 function add(pl) {  //添加称号
     let shop = db.get("shop");
