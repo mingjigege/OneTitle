@@ -146,7 +146,7 @@ function shop(pl) {
             if (moneyred != 0) {
                 //money.reduce(pl.xuid, moneyred);
                 log(moneyred)
-                Economy.reduce(pl, moneyred);
+                Economy.reduce(pl, moneyred);       //这里没扣钱
                 pl.tell('购买成功');//这个地方可以重复购买这个很糟糕，然后购买前得加个是否购买的确认表单
                 player.push({
                     "title": shop[id].title
@@ -287,12 +287,13 @@ function modifys(pl, item) {
             pl.tell("未输入称号所需金币");
             return;
         }
-        if (isNaN(Number(money, 10)) && money != 0) {
+        let Nmoney = parseInt(money);       //这里转成数字类型表单添加所需金币数量就会失败
+        if (isNaN(Number(Nmoney, 10)) && Nmoney != 0) {
             pl.tell("金币请写为数字");
             return;
         }
-        pl.tell('§d[§eTitle§d] §r称号"' + shop[item].title + '§r" "' + shop[item].money + '"成功修改为"' + title + '§r" "' + money + '"');
-        shop[item].money = money;
+        pl.tell('§d[§eTitle§d] §r称号"' + items.title + '§r" "' + items.money + '"成功修改为"' + title + '§r" "' + Nmoney + '"');
+        shop[item].money = Nmoney;
         shop[item].title = title;
         db.set('shop', shop);
     });
