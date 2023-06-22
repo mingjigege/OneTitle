@@ -35,7 +35,7 @@ mc.listen("onServerStarted", () => {
     cmds.setCallback((cmd, ori, out, res) => {
 
         if (ori.player == null) {
-            let EnabledChat = config.get("EnabledChat");
+            EnabledChat = config.get("EnabledChat");
             return out.success("配置文件已重载");//设置重载,这个没啥用
         }
         else {
@@ -133,8 +133,7 @@ function shop(pl) {
             return;
         }
 
-        let moneys = pl.getMoney();
-        //let moneys = Economy.get(pl);     //这个我先注释一下
+        let moneys = Economy.get(pl);
         let moneyred = parseInt(shop[id].money);
         let targetObj = player.find(obj => obj.title == shop[id].title);
 
@@ -142,21 +141,24 @@ function shop(pl) {
             pl.tell('购买失败,请勿重复购买');
             return;
         }
-        if (moneys >= moneyred) {
-            if (moneyred != 0) {
-                //money.reduce(pl.xuid, moneyred);
-                log(moneyred)
-                Economy.reduce(pl, moneyred);       //这里没扣钱
-                pl.tell('购买成功');//这个地方可以重复购买这个很糟糕，然后购买前得加个是否购买的确认表单
-                player.push({
-                    "title": shop[id].title
-                });
-                db.set(pl.xuid, player);
+        pl.sendModalForm("购买称号", `你确定要购买 ${shop[id].title} 吗？\n\n本操作不可撤销！`, "我确定", "我再想想", (pl, arg) => {
+            if (arg == null) { return; }
+            if (arg == 1) {
+                if (moneys >= moneyred) {
+                    if (moneyred != 0) {
+                        Economy.reduce(pl, moneyred);
+                        pl.tell('购买成功');
+                        player.push({
+                            "title": shop[id].title
+                        });
+                        db.set(pl.xuid, player);
+                    }
+                }
+                else {
+                    pl.tell('购买失败没钱');
+                }
             }
-        }
-        else {
-            pl.tell('购买失败没钱');
-        }
+        })
     })
 }
 function admin(pl) {
@@ -182,7 +184,7 @@ function add(pl) {  //添加称号
 
     pl.sendForm(fm, (pl, dt) => {
         if (dt == null) {
-            admin(pl)//搞个x返回
+            admin(pl)
             return;
         };
 
@@ -226,7 +228,7 @@ function remove(pl) {       //移除称号
 
     pl.sendForm(fm, (pl, id) => {
         if (id == null) {
-            admin(pl)//搞个x返回
+            admin(pl)
             return;
         }
         if (shop[id]) {
@@ -242,7 +244,6 @@ function remove(pl) {       //移除称号
 function modify(pl) {
     let fm = mc.newSimpleForm();
     let shop = db.get("shop");
-    log(shop)
     if (!shop) {
         pl.tell('商店无数据,请添加后重试');
         return;
@@ -287,13 +288,13 @@ function modifys(pl, item) {
             pl.tell("未输入称号所需金币");
             return;
         }
-        let Nmoney = parseInt(money);       //这里转成数字类型表单添加所需金币数量就会失败
-        if (isNaN(Number(Nmoney, 10)) && Nmoney != 0) {
+        //let Nmoney = parseInt(money);       //这里转成数字类型表单添加所需金币数量就会失败
+        if (isNaN(Number(money, 10)) && money != 0) {
             pl.tell("金币请写为数字");
             return;
         }
-        pl.tell('§d[§eTitle§d] §r称号"' + items.title + '§r" "' + items.money + '"成功修改为"' + title + '§r" "' + Nmoney + '"');
-        shop[item].money = Nmoney;
+        pl.tell('§d[§eTitle§d] §r称号"' + items.title + '§r" "' + items.money + '"成功修改为"' + title + '§r" "' + money + '"');
+        shop[item].money = money;
         shop[item].title = title;
         db.set('shop', shop);
     });
@@ -310,7 +311,7 @@ function op(pl) {       //OP更改玩家称号大概功能 新增 移除 修改�
     pl.sendForm(fm, (pl, id) => {
         switch (id) {
             case 0:
-                pl.tell('尽情期待');
+                OnlinePlayers(pl);
                 break;
             case 1:
                 pl.tell('尽情期待');
@@ -322,6 +323,57 @@ function op(pl) {       //OP更改玩家称号大概功能 新增 移除 修改�
                 pl.tell('尽情期待');
                 break;
             default:
+                break;
+        }
+    });
+}
+function OnlinePlayers(pl) {
+    let fm = mc.newSimpleForm();
+    fm.setTitle(`§1管理在线玩家`);
+    fm.setContent(`请选择你要管理的玩家`)
+    let OnlinePlayers = mc.getOnlinePlayers();
+    OnlinePlayers.forEach((player) => {
+        fm.addButton(player.realName);
+    });
+    pl.sendForm(fm, (pl, arg) => {
+        if (arg == null) {
+            op(pl);
+        }
+        else {
+            if (OnlinePlayers[arg].uuid == pl.uuid) {
+                pl.tell('§d[§eTitle§d] §r自己查自己好玩吗');;
+                return;
+            }
+            if (OnlinePlayers[arg].uuid != undefined) {
+                CheckPlayer(pl, SearchData(OnlinePlayers[arg]));
+            }
+            else {
+                pl.tell(`§l§e[LLSECheckBag] §r§c目标玩家已离线,请使用查询全部玩家来查询离线玩家背包。`);
+            }
+            return;
+        }
+    });
+}
+function TitlePlayer(pl, pldt) {
+    let fm = mc.newSimpleForm();
+    fm.setTitle(`管理玩家称号`);
+    fm.setContent(`已选择玩家 ${pldt.name}\n请选择你要进行的操作`)
+    fm.addButton(`新增玩家称号`);
+    fm.addButton(`移除玩家称号`);
+    fm.addButton(`修改玩家称号`);
+    pl.sendForm(fm, (pl, arg) => {
+        switch (arg) {
+            case 0:
+                //add(pl, pldt);
+                break;
+            case 1:
+                //remove(pl , pldt);
+                break;
+            case 2:
+                //set(pl , pldt);
+                break;
+            default:
+                op(pl);
                 break;
         }
     });
@@ -342,7 +394,7 @@ function title(pl) {     //获取玩家使用称号用于导出API
 }
 mc.listen("onJoin", (pl) => {
     if (pl.isSimulatedPlayer()) { return true; }
-    db.delete(pl.xuid);       //调试使用
+    //db.delete(pl.xuid);       //调试使用
     //db.delete('use');
 
     let DefaultTitle = config.get("DefaultTitle");
@@ -371,10 +423,10 @@ mc.listen("onJoin", (pl) => {
         db.set('use', players);
         pl.tell('§d[§eTitle§d] §r您已获得初始称号§r"' + players[pl.xuid][0].use + '§r" 输入 /tsp 即可管理称号');
     }
-    let a = db.get('use');
-    let aa = db.get(pl.xuid);
-    log(a)
-    log(aa)
+    //let a = db.get('use');
+    //let aa = db.get(pl.xuid);
+    //log(a)
+    //log(aa)
 });
 
 mc.listen("onChat", (pl, msg) => {      //这个我改一下        静音问题先记录
