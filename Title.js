@@ -341,14 +341,14 @@ function OnlinePlayers(pl) {
         }
         else {
             if (OnlinePlayers[arg].uuid == pl.uuid) {
-                pl.tell('§d[§eTitle§d] §r自己查自己好玩吗');;
+                pl.tell('§d[§eTitle§d] §r自己查自己好玩吗');
                 return;
             }
-            if (OnlinePlayers[arg].uuid != undefined) {
-                CheckPlayer(pl, SearchData(OnlinePlayers[arg]));
+            if (OnlinePlayers[arg].xuid != undefined) {
+                TitlePlayer(OnlinePlayers[arg]);
             }
             else {
-                pl.tell(`§l§e[LLSECheckBag] §r§c目标玩家已离线,请使用查询全部玩家来查询离线玩家背包。`);
+                pl.tell('§d[§eTitle§d] §r目标玩家已离线,请使用查询全部玩家来查询离线玩家背包');
             }
             return;
         }
