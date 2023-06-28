@@ -1,6 +1,6 @@
 {
-    "name": "Title",
+    "name": "OneTitle",
     "version": "1.0.0",
     "description": "称号插件",
-    "main": "Title.js"
+    "main": "OneTitle.js"
 }
