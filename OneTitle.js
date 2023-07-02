@@ -1,9 +1,3 @@
-/*
-有建议的话可以写这里
-表单那些我记得小鼠有个lib来着应该比较方便
-然后就是重复部分搞function 尽量少读取数据库配置文件中的重复内容
-function再改成nodejs多文件
-*/
 // LiteLoader-AIDS automatic generated
 /// <reference path="d:\LLSETEST/dts/HelperLib-master/src/index.d.ts"/> 
 //这个上面的不删，方便我写点补全
@@ -19,7 +13,8 @@ const defaultconfig = JSON.stringify({  //默认配置文件
     "EnabledChat": true,
     "DefaultTitle": "§a萌新一只",
     "economy_type": "llmoney",
-    "economy_name": "money"
+    "economy_name": "money",
+    "ShopOutput": true
     //预留 购买称号是否全服通知
 });
 const SimpleFormCallback = require("./lib/SimpleFormCallback.js");
@@ -27,7 +22,7 @@ const config = data.openConfig(configpath, "json", defaultconfig);    //打开�
 let EnabledChat = config.get("EnabledChat");        //获取是否启动聊天功能
 const Economy = new gmoney(config.get("economy_type"), config.get("economy_name"));//获取经济单位
 let db = new KVDatabase("./plugins/OneTitle/playerdb");       //打开数据库
-log("数据库打开成功")//这个调试口到时候统一上面写个调试内容
+log("数据库打开成功");       //这个调试口到时候统一上面写个调试内容
 mc.listen("onServerStarted", () => {
     let cmds = mc.newCommand("titleshop", "§e称号管理       --- §bOneTitle", PermType.Any);
     cmds.setAlias("tsp");
@@ -36,7 +31,7 @@ mc.listen("onServerStarted", () => {
 
         if (ori.player == null) {
             EnabledChat = config.get("EnabledChat");
-            return out.success("§d[§eOneTitle§d] §r配置文件已重载");//设置重载,这个没啥用
+            return out.success("§d[§eOneTitle§d] §r配置文件已重载");        //设置重载,这个没啥用
         }
         else {
             main(ori.player);
@@ -140,18 +135,36 @@ function shop(pl) {
             pl.tell('§d[§eOneTitle§d] §r购买失败,请勿重复购买');
             return;
         }
-        pl.sendModalForm("购买称号", `你确定要购买 ${shop[id].title} 吗？\n\n本操作不可撤销！`, "我确定", "我再想想", (pl, arg) => {
+        pl.sendModalForm("购买称号", `你确定要购买 ${shop[id].title} 吗？\n\n本操作不可撤销!`, "我确定", "我再想想", (pl, arg) => {
             if (arg == null) { return; }
             if (arg == 1) {
                 if (moneys >= moneyred) {
                     if (moneyred != 0) {
                         Economy.reduce(pl, moneyred);
-                        pl.tell('§d[§eOneTitle§d] §r购买成功' + shop[id].title);
-                        player.push({
-                            "title": shop[id].title
-                        });
-                        db.set(pl.xuid, player);
                     }
+                    pl.tell('§d[§eOneTitle§d] §r购买成功' + shop[id].title);
+                    player.push({
+                        "title": shop[id].title
+                    });
+                    db.set(pl.xuid, player);
+                    let ShopOutput = config.get("ShopOutput");
+                    mc.broadcast("§d[§eOneTitle§d] §r恭喜玩家" + pl.realName + "购买称号" + shop[id].title)
+                    if (ShopOutput == true) {
+
+                    }
+                    pl.sendModalForm("称号商店", `你已购买 ${shop[id].title} \n是否立即使用`, "我确定", "我再想想", (pl, arg) => {
+                        if (arg == null) {
+                            return;
+                        }
+                        let player = db.get('use');
+
+                        pl.tell('§d[§eOneTitle§d] §r您的称号已从"' + player[pl.xuid][0].use + '§r"切换为"' + shop[id].title + '"');
+                        player[pl.xuid].splice(0, 1);
+                        player[pl.xuid].push({
+                            "use": shop[id].title
+                        });
+                        db.set('use', player);
+                    });
                 }
                 else {
                     pl.tell('§d[§eOneTitle§d] §r余额不足,购买失败');
@@ -232,6 +245,7 @@ function addplayer(pl, pldt) {  //添加玩家称号
             "title": title
         });
         pl.tell('§d[§eOneTitle§d] §r称号"' + title + '§r"为' + pldt.realName + '添加成功');
+        pldt.tell('§d[§eOneTitle§d] §r称号"' + title + '§r"由' + pl.realName + '为你添加成功');
         db.set(pldt.xuid, player);
     });
 }
