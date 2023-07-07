@@ -1,13 +1,11 @@
 // LiteLoader-AIDS automatic generated
 /// <reference path="d:\LLSETEST/dts/HelperLib-master/src/index.d.ts"/> 
-//这个上面的不删，方便我写点补全
 const PLUGIN_NAME = "OneTitle";
 const Register = require("./lib/Register.js");
-Register.info(PLUGIN_NAME, "称号插件", [0, 0, 1, Version.Dev], {
-    Author: "铭记mingji,EpsilonZunsat"
-});//修改一些依赖文件
+Register.info(PLUGIN_NAME, "称号插件", [1, 0, 1, Version.Dev], {
+    Author: "铭记mingji,EpsilonZunsat,Minimouse"
+});
 const configpath = "./plugins/OneTitle/config.json";   //配置文件路径
-//这个地方使用gmoney来加入多经济支持,计分板经济支持
 const gmoney = require("./lib/gmoney.js");
 const defaultconfig = JSON.stringify({  //默认配置文件
     "EnabledChat": true,
@@ -15,7 +13,6 @@ const defaultconfig = JSON.stringify({  //默认配置文件
     "economy_type": "llmoney",
     "economy_name": "money",
     "ShopOutput": true
-    //预留 购买称号是否全服通知
 });
 const SimpleFormCallback = require("./lib/SimpleFormCallback.js");
 const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
@@ -23,6 +20,7 @@ let EnabledChat = config.get("EnabledChat");        //获取是否启动聊天�
 const Economy = new gmoney(config.get("economy_type"), config.get("economy_name"));//获取经济单位
 let db = new KVDatabase("./plugins/OneTitle/playerdb");       //打开数据库
 log("数据库打开成功");       //这个调试口到时候统一上面写个调试内容
+
 mc.listen("onServerStarted", () => {
     let cmds = mc.newCommand("titleshop", "§e称号管理       --- §bOneTitle", PermType.Any);
     cmds.setAlias("tsp");
@@ -38,6 +36,15 @@ mc.listen("onServerStarted", () => {
         }
     });
     cmds.setup();
+    let PAPI = require('../../lib/BEPlaceholderAPI-JS.js').PAPI;
+    if (!PAPI) {
+        log('PAPI称号变量未被注册');
+    }
+    else{
+        PAPI.registerPlayerPlaceholder(title, "OneTitle", "player_title");
+        log('PAPI称号变量注册成功');
+    }
+
 });
 
 function main(pl) {     //主表单，这个经常要改我就不动了
