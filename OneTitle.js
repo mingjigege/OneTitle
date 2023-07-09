@@ -2,7 +2,7 @@
 /// <reference path="d:\LLSETEST/dts/HelperLib-master/src/index.d.ts"/> 
 const PLUGIN_NAME = "OneTitle";
 const Register = require("./lib/Register.js");
-Register.info(PLUGIN_NAME, "称号插件", [1, 0, 1, Version.Dev], {
+Register.info(PLUGIN_NAME, "称号插件", [1, 0, 3, Version.Dev], {
     Author: "铭记mingji,EpsilonZunsat,Minimouse"
 });
 const configpath = "./plugins/OneTitle/config.json";   //配置文件路径
@@ -40,8 +40,9 @@ mc.listen("onServerStarted", () => {
     if (!PAPI) {
         log('PAPI称号变量未被注册');
     }
-    else{
+    else {
         PAPI.registerPlayerPlaceholder(title, "OneTitle", "player_title");
+        PAPI.getValue('player_title');
         log('PAPI称号变量注册成功');
     }
 
@@ -155,30 +156,32 @@ function shop(pl) {
                     });
                     db.set(pl.xuid, player);
                     let ShopOutput = config.get("ShopOutput");
-                    mc.broadcast("§d[§eOneTitle§d] §r恭喜玩家" + pl.realName + "购买称号" + shop[id].title)
-                    if (ShopOutput == true) {
 
+                    if (ShopOutput == true) {
+                        mc.broadcast("§d[§eOneTitle§d] §r恭喜玩家" + pl.realName + "购买称号" + shop[id].title);
                     }
                     pl.sendModalForm("称号商店", `你已购买 ${shop[id].title} \n是否立即使用`, "我确定", "我再想想", (pl, arg) => {
                         if (arg == null) {
                             return;
                         }
-                        let player = db.get('use');
+                        if (arg == 1) {
+                            let player = db.get('use');
 
-                        pl.tell('§d[§eOneTitle§d] §r您的称号已从"' + player[pl.xuid][0].use + '§r"切换为"' + shop[id].title + '"');
-                        player[pl.xuid].splice(0, 1);
-                        player[pl.xuid].push({
-                            "use": shop[id].title
-                        });
-                        db.set('use', player);
+                            pl.tell('§d[§eOneTitle§d] §r您的称号已从"' + player[pl.xuid][0].use + '§r"切换为"' + shop[id].title + '"');
+                            player[pl.xuid].splice(0, 1);
+                            player[pl.xuid].push({
+                                "use": shop[id].title
+                            });
+                            db.set('use', player);
+                        }
                     });
                 }
                 else {
                     pl.tell('§d[§eOneTitle§d] §r余额不足,购买失败');
                 }
             }
-        })
-    })
+        });
+    });
 }
 function admin(pl) {
     //引入依赖
@@ -283,9 +286,11 @@ function remove(pl) {       //商店移除称号
                     remove(pl);
                     return;
                 }
-                pl.tell('§d[§eOneTitle§d] §r称号"' + shop[id].title + '§r"移除成功');
-                shop.splice(id, 1);
-                db.set('shop', shop);
+                if (arg == 1) {
+                    pl.tell('§d[§eOneTitle§d] §r称号"' + shop[id].title + '§r"移除成功');
+                    shop.splice(id, 1);
+                    db.set('shop', shop);
+                }
             });
         }
         else {
@@ -315,9 +320,22 @@ function removeplayer(pl, pldt) {       //移除玩家称号
                     removeplayer(pl);
                     return;
                 }
-                pl.tell('§d[§eOneTitle§d] §r成功移除 ' + pldt.realName + '的称号"' + player[id].title + '§r"');
-                player.splice(id, 1);
-                db.set(pldt.xuid, player);
+                if (arg == 1) {
+                    let players = db.get('use');
+                    let DefaultTitle = config.get("DefaultTitle");
+                    if (players[pl.xuid][0].use == player[id].title) {
+                        pl.tell('§d[§eOneTitle§d] §r' + pldt.realName + '的称号已从"' + players[pl.xuid][0].use + '§r"切换为初始称号"' + DefaultTitle + '"');
+                        players[pl.xuid].splice(0, 1);
+                        players[pl.xuid].push({
+                            "use": DefaultTitle
+                        });
+                        db.set('use', players);
+                        log(players)
+                    }
+                    pl.tell('§d[§eOneTitle§d] §r成功移除 ' + pldt.realName + '的称号"' + player[id].title + '§r"');
+                    player.splice(id, 1);
+                    db.set(pldt.xuid, player);
+                }
             });
         }
     });
@@ -500,17 +518,17 @@ function TitlePlayer(pl, pldt) {
         }
     });
 }
-function title(pl) {     //获取玩家使用称号用于导出API
+function title(xuid) {     //获取玩家使用称号用于导出API
     let players = db.get('use');
 
     if (!players) {
-        return 'ERROR';
+        return 'ERROR';     //在正常使用时不可能为此项
     }
-    if (!players[pl.xuid]) {        //在正常使用时不可能为前两项
+    if (!players[xuid]) {
         return '无数据';
     }
     else {
-        return players[pl.xuid][0].use;
+        return players[xuid][0].use;
     }
 
 }
@@ -550,7 +568,7 @@ mc.listen("onJoin", (pl) => {
 mc.listen("onChat", (pl, msg) => {      //这个我改一下        静音问题先记录
     if (pl.isSimulatedPlayer()) { return true; }
     if (EnabledChat) {
-        let use = title(pl);
+        let use = title(pl.xuid);
         mc.broadcast("[" + use + "§r] <" + pl.realName + "§r> " + msg);
         return false;
     }
