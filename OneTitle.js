@@ -2,22 +2,35 @@
 /// <reference path="d:\LLSETEST/dts/HelperLib-master/src/index.d.ts"/> 
 const PLUGIN_NAME = "OneTitle";
 const Register = require("./lib/Register.js");
-Register.info(PLUGIN_NAME, "称号插件", [1, 0, 3, Version.Dev], {
+Register.info(PLUGIN_NAME, "称号插件", [1, 0, 5, Version.Dev], {
     Author: "铭记mingji,EpsilonZunsat,Minimouse"
 });
 const configpath = "./plugins/OneTitle/config.json";   //配置文件路径
 const gmoney = require("./lib/gmoney.js");
 const defaultconfig = JSON.stringify({  //默认配置文件
-    "EnabledChat": true,
-    "DefaultTitle": "§a萌新一只",
-    "economy_type": "llmoney",
-    "economy_name": "money",
-    "ShopOutput": true
+    "EnabledChat": false,        //是否启用插件聊天增强功能
+    "DefaultTitle": "§a萌新一只",        //玩家默认称号
+    "economy_type": "llmoney",        //经济类型llmoney或score
+    "economy_name": "money",        //货币名字
+    "ConsoleOutput": false,        //控制台输出
+    "PlayerAddMoney": "1000",        //玩家个人添加称号所需金币
+    "PlayerRemoveMoney": "1000",        //玩家个人删除称号所需金币
+    "TitleLimit": "6",      //玩家自定义字数限制
+    "BanTitle": [       //称号违禁词
+        '114514',
+        '1919810'
+    ]
 });
 const SimpleFormCallback = require("./lib/SimpleFormCallback.js");
 const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
+const moneyname = config.get("economy_name");       //货币名字
+const PlayerAddMoney = config.get("PlayerAddMoney");        //玩家添加称号所需金币
+const PlayerRemoveMoney = config.get("PlayerRemoveMoney");      //  玩家移除称号所需金币
+const BanTitle = config.get("BanTitle");        //读取称号违禁词
+const ConsoleOutput = config.get("ConsoleOutput");      //获取是否控制台输出
+const TitleLimit = config.get("TitleLimit");        //获取玩家自定义字数限制 
 let EnabledChat = config.get("EnabledChat");        //获取是否启动聊天功能
-const Economy = new gmoney(config.get("economy_type"), config.get("economy_name"));//获取经济单位
+const Economy = new gmoney(config.get("economy_type"), config.get("economy_name"));     //获取经济单位
 let db = new KVDatabase("./plugins/OneTitle/playerdb");       //打开数据库
 log("数据库打开成功");       //这个调试口到时候统一上面写个调试内容
 
@@ -36,23 +49,26 @@ mc.listen("onServerStarted", () => {
         }
     });
     cmds.setup();
-    let PAPI = require('../../lib/BEPlaceholderAPI-JS.js').PAPI;
-    if (!PAPI) {
+    if (!File.exists("./plugins/lib/BEPlaceholderAPI-JS.js")) {
         log('PAPI称号变量未被注册');
+        return;
     }
     else {
+        let PAPI = require('../../lib/BEPlaceholderAPI-JS.js').PAPI;
         PAPI.registerPlayerPlaceholder(title, "OneTitle", "player_title");
-        PAPI.getValue('player_title');
         log('PAPI称号变量注册成功');
     }
 
 });
-
+function hasShield(raw) {
+    let regex = new RegExp(BanTitle.join("|"));
+    return regex.test(raw);
+}
 function main(pl) {     //主表单，这个经常要改我就不动了
     let fm = mc.newSimpleForm();
     fm.setTitle("§1§l称号管理");
     fm.setContent("§c请选择");
-    fm.addButton("§e§l个人称号切换", "textures/ui/trade_icon");
+    fm.addButton("§e§l个人称号管理", "textures/ui/trade_icon");
     fm.addButton("§a§l全局称号商店", "textures/ui/MCoin");
     if (pl.isOP()) {
         fm.addButton("§l管理商店数据", "textures/ui/timer");
@@ -62,7 +78,7 @@ function main(pl) {     //主表单，这个经常要改我就不动了
     pl.sendForm(fm, (pl, id) => {
         switch (id) {
             case 0:
-                titeplayer(pl);
+                titleplayer(pl);
                 break;
             case 1:
                 shop(pl);
@@ -72,6 +88,48 @@ function main(pl) {     //主表单，这个经常要改我就不动了
                 break;
             case 3:
                 op(pl);
+                break;
+            default:
+                break;
+        }
+    });
+}
+function titleplayer(pl) {
+    let fm = mc.newSimpleForm();
+    fm.setTitle("§1§l个人称号管理");
+    fm.setContent("§c请选择");
+    fm.addButton("§a§l切换称号");
+    fm.addButton("§b§l添加称号");
+    fm.addButton("§a§l移除称号");
+
+    pl.sendForm(fm, (pl, id) => {
+        switch (id) {
+            case 0:
+                titeplayer(pl);
+                break;
+            case 1:
+                let moneyred = parseInt(PlayerAddMoney);
+                pl.sendModalForm("添加称号", `你确定要添加个人称号吗\n这将需要${moneyred}:${moneyname}`, "我确定", "我再想想", (pl, arg) => {
+                    if (arg == null) {
+                        titleplayer(pl);
+                        return;
+                    }
+                    if (arg == 1) {
+                        addplayer(pl, pl, "请输入", 1);
+                    }
+                });
+                break;
+            case 2:
+                let moneyreds = parseInt(PlayerRemoveMoney);
+                pl.sendModalForm("移除称号", `你确定要移除个人称号吗\n这将需要${moneyreds}:${moneyname}`, "我确定", "我再想想", (pl, arg) => {
+                    if (arg == null) {
+                        titleplayer(pl);
+                        return;
+                    }
+                    if (arg == 1) {
+                        removeplayer(pl, pl, 1);
+                    }
+                });
                 break;
             default:
                 break;
@@ -96,8 +154,20 @@ function titeplayer(pl) {   //个人切换称号
             return;
         }
         if (players[id].title == player[pl.xuid][0].use) {
-            pl.tell("§d[§eOneTitle§d] §r当前称号正在使用");
-            return;
+            pl.sendModalForm("切换称号", `当前称号 ${players[id].title} 正在使用\n你确定要取消佩戴吗\n本操作不可撤销!`, "我确定", "我再想想", (pl, arg) => {
+                if (arg == null) {
+                    titeplayer(pl);
+                    return;
+                }
+                if (arg == 1) {
+                    player[pl.xuid].splice(0, 1);
+                    player[pl.xuid].push({
+                        "use": ""
+                    });
+                    db.set('use', player);
+                    return;
+                }
+            });
         }
         if (players[id].title) {
             pl.tell('§d[§eOneTitle§d] §r您的称号已从"' + player[pl.xuid][0].use + '§r"切换为"' + players[id].title + '"');
@@ -108,7 +178,7 @@ function titeplayer(pl) {   //个人切换称号
             db.set('use', player);
         }
         else {
-            pl.tell('§d[§eOneTitle§d] §r称号切换失败,可能该称号已被移除');
+            pl.tell('§d[§eOneTitle§d] §r称号切换失败,可能该称号不存在');
         }
     });
 }
@@ -126,7 +196,7 @@ function shop(pl) {
     fm.setContent("§c请选购");
 
     shop.forEach(i => {
-        fm.addButton(`${i.title}\n价格:${i.money}`);
+        fm.addButton(`${i.title}\n${moneyname}:${i.money}`);
     });
 
     pl.sendForm(fm, (pl, id) => {
@@ -144,7 +214,9 @@ function shop(pl) {
             return;
         }
         pl.sendModalForm("购买称号", `你确定要购买 ${shop[id].title} 吗？\n\n本操作不可撤销!`, "我确定", "我再想想", (pl, arg) => {
-            if (arg == null) { return; }
+            if (arg == null) {
+                return;
+            }
             if (arg == 1) {
                 if (moneys >= moneyred) {
                     if (moneyred != 0) {
@@ -155,11 +227,7 @@ function shop(pl) {
                         "title": shop[id].title
                     });
                     db.set(pl.xuid, player);
-                    let ShopOutput = config.get("ShopOutput");
-
-                    if (ShopOutput == true) {
-                        mc.broadcast("§d[§eOneTitle§d] §r恭喜玩家" + pl.realName + "购买称号" + shop[id].title);
-                    }
+                    mc.broadcast("§d[§eOneTitle§d] §r恭喜玩家" + pl.realName + "购买称号" + shop[id].title);
                     pl.sendModalForm("称号商店", `你已购买 ${shop[id].title} \n是否立即使用`, "我确定", "我再想想", (pl, arg) => {
                         if (arg == null) {
                             return;
@@ -202,7 +270,7 @@ function add(pl) {  //商店添加称号
     let fm = mc.newCustomForm();
     fm.setTitle("§l§1添加称号");
     fm.addInput("称号昵称", "请输入");
-    fm.addInput("所需金币数量", "Number");//这个地方改一下改成数字
+    fm.addInput("所需" + moneyname + "数量", "Number");//这个地方改一下改成数字
 
     pl.sendForm(fm, (pl, dt) => {
         if (dt == null) {
@@ -217,11 +285,11 @@ function add(pl) {  //商店添加称号
             return;
         }
         if (!money) {
-            pl.tell("§d[§eOneTitle§d] §r未输入称号所需金币");
+            pl.tell("§d[§eOneTitle§d] §r未输入称号所需" + moneyname);
             return;
         }
         if (isNaN(Number(money, 10)) && money != 0) {
-            pl.tell("§d[§eOneTitle§d] §r金币请写为数字");
+            pl.tell("§d[§eOneTitle§d] §r" + moneyname + "请写为数字");
             return;
         }
         shop.push({
@@ -232,30 +300,50 @@ function add(pl) {  //商店添加称号
         db.set('shop', shop);
     });
 }
-function addplayer(pl, pldt) {  //添加玩家称号
+function addplayer(pl, pldt, item, type) {      //添加玩家称号
     let player = db.get(pldt.xuid);
-
     let fm = mc.newCustomForm();
     fm.setTitle("§l§1添加称号");
-    fm.addInput("称号昵称", "请输入");
+    fm.addInput("称号昵称", item);
 
     pl.sendForm(fm, (pl, dt) => {
         if (dt == null) {
-            op(pl);
             return;
         };
-
         let [title] = dt;
 
         if (!title) {
             pl.tell("§d[§eOneTitle§d] §r未输入称号昵称");
             return;
         }
+        if (type == 1) {
+            let addmoney = Economy.get(pl);
+            let moneyred = parseInt(PlayerAddMoney);
+            if (addmoney < moneyred) {
+                pl.tell('§d[§eOneTitle§d] §r余额不足' + moneyred + ':' + moneyname + '§r购买失败');
+                return;
+            }
+            if (moneyred != 0) {
+                Economy.reduce(pl, moneyred);
+            }
+            let items = hasShield(title);
+            if (items != false) {
+                addplayer(pl, pl, "输入的称号昵称包含违禁词,请重输", 1)
+                return;
+            }
+            if (title.length > TitleLimit) {
+                addplayer(pl, pl, "输入的称号昵称过长,请重输", 1)
+                return;
+            }
+            pl.tell('§d[§eOneTitle§d] §r成功花费' + moneyred + ':' + moneyname + '§r来添加个人称号');
+        }
+        pl.tell('§d[§eOneTitle§d] §r称号"' + title + '§r"为' + pldt.realName + '添加成功');
+        if (pl.realName != pl.realName) {
+            pldt.tell('§d[§eOneTitle§d] §r称号"' + title + '§r"由' + pl.realName + '为你添加成功');
+        }
         player.push({
             "title": title
         });
-        pl.tell('§d[§eOneTitle§d] §r称号"' + title + '§r"为' + pldt.realName + '添加成功');
-        pldt.tell('§d[§eOneTitle§d] §r称号"' + title + '§r"由' + pl.realName + '为你添加成功');
         db.set(pldt.xuid, player);
     });
 }
@@ -298,7 +386,7 @@ function remove(pl) {       //商店移除称号
         }
     });
 }
-function removeplayer(pl, pldt) {       //移除玩家称号
+function removeplayer(pl, pldt, type) {       //移除玩家称号
     let player = db.get(pldt.xuid);
     let fm = mc.newSimpleForm();
 
@@ -311,16 +399,26 @@ function removeplayer(pl, pldt) {       //移除玩家称号
 
     pl.sendForm(fm, (pl, id) => {
         if (id == null) {
-            op(pl);
             return;
         }
         if (player[id]) {
             pl.sendModalForm("移除称号", `你确定要移除 ${player[id].title} 吗？\n\n本操作不可撤销!`, "我确定", "我再想想", (pl, arg) => {
                 if (arg == null) {
-                    removeplayer(pl);
                     return;
                 }
                 if (arg == 1) {
+                    if (type == 1) {
+                        let removemoney = Economy.get(pl);
+                        let moneyred = parseInt(PlayerRemoveMoney);
+                        if (removemoney < moneyred) {
+                            pl.tell('§d[§eOneTitle§d] §r余额不足' + moneyred + ':' + moneyname + '§r移除失败');
+                            return;
+                        }
+                        if (moneyred != 0) {
+                            Economy.reduce(pl, moneyred);
+                            pl.tell('§d[§eOneTitle§d] §r成功花费' + moneyred + ':' + moneyname + '§r移除' + player[id].title);
+                        }
+                    }
                     let players = db.get('use');
                     let DefaultTitle = config.get("DefaultTitle");
                     if (players[pl.xuid][0].use == player[id].title) {
@@ -330,9 +428,8 @@ function removeplayer(pl, pldt) {       //移除玩家称号
                             "use": DefaultTitle
                         });
                         db.set('use', players);
-                        log(players)
                     }
-                    pl.tell('§d[§eOneTitle§d] §r成功移除 ' + pldt.realName + '的称号"' + player[id].title + '§r"');
+                    pl.tell('§d[§eOneTitle§d] §r成功移除' + pldt.realName + '的称号"' + player[id].title + '§r"');
                     player.splice(id, 1);
                     db.set(pldt.xuid, player);
                 }
@@ -370,7 +467,7 @@ function modify(pl) {       //选择需要修改的玩家
     fm.setContent("§c请选择");
 
     shop.forEach(i => {
-        fm.addButton(`${i.title}\n价格:${i.money}`);
+        fm.addButton(`${i.title}\n${moneyname}:${i.money}`);
     });
 
     pl.sendForm(fm, (pl, id) => {
@@ -387,7 +484,7 @@ function modifys(pl, item) {
     let fm = mc.newCustomForm();
     fm.setTitle("§l§1修改称号");
     fm.addInput("称号昵称", "", items.title);
-    fm.addInput("所需金币数量", "", items.money);
+    fm.addInput("所需" + moneyname + "数量", "", items.money);
 
     pl.sendForm(fm, (pl, dt) => {
         if (dt == null) {
@@ -402,7 +499,7 @@ function modifys(pl, item) {
             return;
         }
         if (!money) {
-            pl.tell("§d[§eOneTitle§d] §r未输入称号所需金币");
+            pl.tell("§d[§eOneTitle§d] §r未输入称号所需" + moneyname);
             return;
         }
         //let Nmoney = parseInt(money);       //这里转成数字类型表单添加所需金币数量就会失败
@@ -504,10 +601,10 @@ function TitlePlayer(pl, pldt) {
         }
         switch (arg) {
             case 0:
-                addplayer(pl, pldt);
+                addplayer(pl, pldt, "请输入", 0);
                 break;
             case 1:
-                removeplayer(pl, pldt);
+                removeplayer(pl, pldt, 0);
                 break;
             case 2:
                 modifyplayer(pl, pldt);
@@ -530,7 +627,6 @@ function title(xuid) {     //获取玩家使用称号用于导出API
     else {
         return players[xuid][0].use;
     }
-
 }
 mc.listen("onJoin", (pl) => {
     if (pl.isSimulatedPlayer()) { return true; }
@@ -569,7 +665,11 @@ mc.listen("onChat", (pl, msg) => {      //这个我改一下        静音问题
     if (pl.isSimulatedPlayer()) { return true; }
     if (EnabledChat) {
         let use = title(pl.xuid);
+
         mc.broadcast("[" + use + "§r] <" + pl.realName + "§r> " + msg);
+        if (ConsoleOutput != false) {
+            log("[" + use + "] <" + pl.realName + "> " + msg);
+        }
         return false;
     }
     else {
