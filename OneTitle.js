@@ -2,10 +2,11 @@
 /// <reference path="d:\LLSETEST/dts/HelperLib-master/src/index.d.ts"/> 
 const PLUGIN_NAME = "OneTitle";
 const Register = require("./lib/Register.js");
-Register.info(PLUGIN_NAME, "称号插件", [1, 0, 5, Version.Dev], {
+Register.info(PLUGIN_NAME, "称号插件", [1, 0, 6, Version.Dev], {
     Author: "铭记mingji,EpsilonZunsat,Minimouse"
 });
 const configpath = "./plugins/OneTitle/config.json";   //配置文件路径
+const logpath = "./plugins/OneTitle/logs.log";   //日志文件路径
 const gmoney = require("./lib/gmoney.js");
 const defaultconfig = JSON.stringify({  //默认配置文件
     "EnabledChat": false,        //是否启用插件聊天增强功能
@@ -15,13 +16,15 @@ const defaultconfig = JSON.stringify({  //默认配置文件
     "ConsoleOutput": false,        //控制台输出
     "PlayerAddMoney": "1000",        //玩家个人添加称号所需金币
     "PlayerRemoveMoney": "1000",        //玩家个人删除称号所需金币
+    "PlayerLog": true,      //玩家操作日志
     "TitleLimit": "6",      //玩家自定义字数限制
     "BanTitle": [       //称号违禁词
         '114514',
         '1919810'
     ]
 });
-const SimpleFormCallback = require("./lib/SimpleFormCallback.js");
+const SimpleFormCallback = require("./lib/SimpleFormCallback.js");      //导入依赖
+const fs = require('fs');
 const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
 const moneyname = config.get("economy_name");       //货币名字
 const PlayerAddMoney = config.get("PlayerAddMoney");        //玩家添加称号所需金币
@@ -29,7 +32,8 @@ const PlayerRemoveMoney = config.get("PlayerRemoveMoney");      //  玩家移除
 const BanTitle = config.get("BanTitle");        //读取称号违禁词
 const ConsoleOutput = config.get("ConsoleOutput");      //获取是否控制台输出
 const TitleLimit = config.get("TitleLimit");        //获取玩家自定义字数限制 
-let EnabledChat = config.get("EnabledChat");        //获取是否启动聊天功能
+const EnabledChat = config.get("EnabledChat");        //获取是否启动聊天功能
+const PlayerLog = config.get("PlayerLog");      //获取是否记录玩家操作日志
 const Economy = new gmoney(config.get("economy_type"), config.get("economy_name"));     //获取经济单位
 let db = new KVDatabase("./plugins/OneTitle/playerdb");       //打开数据库
 log("数据库打开成功");       //这个调试口到时候统一上面写个调试内容
@@ -63,6 +67,10 @@ mc.listen("onServerStarted", () => {
 function hasShield(raw) {
     let regex = new RegExp(BanTitle.join("|"));
     return regex.test(raw);
+}
+function logs(message) {
+    let time = system.getTimeStr()
+    fs.appendFileSync(logpath, `${time}${message}\n`);
 }
 function main(pl) {     //主表单，这个经常要改我就不动了
     let fm = mc.newSimpleForm();
@@ -323,9 +331,6 @@ function addplayer(pl, pldt, item, type) {      //添加玩家称号
                 pl.tell('§d[§eOneTitle§d] §r余额不足' + moneyred + ':' + moneyname + '§r购买失败');
                 return;
             }
-            if (moneyred != 0) {
-                Economy.reduce(pl, moneyred);
-            }
             let items = hasShield(title);
             if (items != false) {
                 addplayer(pl, pl, "输入的称号昵称包含违禁词,请重输", 1)
@@ -334,6 +339,12 @@ function addplayer(pl, pldt, item, type) {      //添加玩家称号
             if (title.length > TitleLimit) {
                 addplayer(pl, pl, "输入的称号昵称过长,请重输", 1)
                 return;
+            }
+            if (moneyred != 0) {
+                Economy.reduce(pl, moneyred);
+            }
+            if (!PlayerLog == false) {
+                logs(pl.realName + "添加了个人称号" + title);
             }
             pl.tell('§d[§eOneTitle§d] §r成功花费' + moneyred + ':' + moneyname + '§r来添加个人称号');
         }
@@ -428,6 +439,9 @@ function removeplayer(pl, pldt, type) {       //移除玩家称号
                             "use": DefaultTitle
                         });
                         db.set('use', players);
+                    }
+                    if (!PlayerLog == false) {
+                        logs(pl.realName + "移除了个人称号" + title);
                     }
                     pl.tell('§d[§eOneTitle§d] §r成功移除' + pldt.realName + '的称号"' + player[id].title + '§r"');
                     player.splice(id, 1);
