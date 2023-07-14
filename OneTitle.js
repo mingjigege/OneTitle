@@ -1,10 +1,22 @@
+/* 代办
+*玩家自定义称号时间限制
+*获取成就给予称号   √
+*玩家自定义称号上限
+*玩家自定义称号配置文件开关
+*给予称号时成就命名空间改为描述名
+*添加移除称号改为统一函数
+*/
+
 // LiteLoader-AIDS automatic generated
 /// <reference path="d:\LLSETEST/dts/HelperLib-master/src/index.d.ts"/> 
 const PLUGIN_NAME = "OneTitle";
 const Register = require("./lib/Register.js");
-Register.info(PLUGIN_NAME, "称号插件", [1, 0, 6, Version.Dev], {
+Register.info(PLUGIN_NAME, "称号插件", [1, 0, 7, Version.Dev], {
     Author: "铭记mingji,EpsilonZunsat,Minimouse"
 });
+const AdvancementsAPI = {                      //API导入
+    CheckAdvancement: ll.import("Advancements", "CheckAdvancement")
+}
 const configpath = "./plugins/OneTitle/config.json";   //配置文件路径
 const logpath = "./plugins/OneTitle/logs.log";   //日志文件路径
 const gmoney = require("./lib/gmoney.js");
@@ -14,28 +26,34 @@ const defaultconfig = JSON.stringify({  //默认配置文件
     "economy_type": "llmoney",        //经济类型llmoney或score
     "economy_name": "money",        //货币名字
     "ConsoleOutput": false,        //控制台输出
-    "PlayerAddMoney": "1000",        //玩家个人添加称号所需金币
-    "PlayerRemoveMoney": "1000",        //玩家个人删除称号所需金币
+    "PlayerAddMoney": "8888",        //玩家个人添加称号所需金币
+    "PlayerRemoveMoney": "1",        //玩家个人删除称号所需金币
     "PlayerLog": true,      //玩家操作日志
-    "TitleLimit": "6",      //玩家自定义字数限制
+    "TitleLimit": "6",      //玩家自定义称号字数限制
     "BanTitle": [       //称号违禁词
         '114514',
         '1919810'
-    ]
+    ],
+    "Advancements": {       //格式 称号命名空间:奖励称号
+        "end:dragon_egg": "龙之勇者",
+        "end:end": "勇闯禁区"
+    }
 });
 const SimpleFormCallback = require("./lib/SimpleFormCallback.js");      //导入依赖
 const fs = require('fs');
 const config = data.openConfig(configpath, "json", defaultconfig);    //打开配置文件
-const moneyname = config.get("economy_name");       //货币名字
-const PlayerAddMoney = config.get("PlayerAddMoney");        //玩家添加称号所需金币
-const PlayerRemoveMoney = config.get("PlayerRemoveMoney");      //  玩家移除称号所需金币
-const BanTitle = config.get("BanTitle");        //读取称号违禁词
-const ConsoleOutput = config.get("ConsoleOutput");      //获取是否控制台输出
-const TitleLimit = config.get("TitleLimit");        //获取玩家自定义字数限制 
-const EnabledChat = config.get("EnabledChat");        //获取是否启动聊天功能
-const PlayerLog = config.get("PlayerLog");      //获取是否记录玩家操作日志
-const Economy = new gmoney(config.get("economy_type"), config.get("economy_name"));     //获取经济单位
+let moneyname = config.get("economy_name");       //货币名字
+let PlayerAddMoney = config.get("PlayerAddMoney");        //玩家添加称号所需金币
+let PlayerRemoveMoney = config.get("PlayerRemoveMoney");      //  玩家移除称号所需金币
+let BanTitle = config.get("BanTitle");        //读取称号违禁词
+let ConsoleOutput = config.get("ConsoleOutput");      //获取是否控制台输出
+let TitleLimit = config.get("TitleLimit");        //获取玩家自定义字数限制 
+let PlayerLog = config.get("PlayerLog");      //获取是否记录玩家操作日志
+let Advancements = config.get("Advancements");        //获取成就完成奖励称号
+let Economy = new gmoney(config.get("economy_type"), config.get("economy_name"));     //获取经济单位
 let db = new KVDatabase("./plugins/OneTitle/playerdb");       //打开数据库
+let EnabledChat = config.get("EnabledChat");        //获取是否启动聊天功能
+
 log("数据库打开成功");       //这个调试口到时候统一上面写个调试内容
 
 mc.listen("onServerStarted", () => {
@@ -43,12 +61,21 @@ mc.listen("onServerStarted", () => {
     cmds.setAlias("tsp");
     cmds.overload();
     cmds.setCallback((cmd, ori, out, res) => {
-
-        if (ori.player == null) {
-            EnabledChat = config.get("EnabledChat");
+        if (!ori.player) {
+            moneyname = config.get("economy_name");       //货币名字
+            PlayerAddMoney = config.get("PlayerAddMoney");        //玩家添加称号所需金币
+            PlayerRemoveMoney = config.get("PlayerRemoveMoney");      //  玩家移除称号所需金币
+            BanTitle = config.get("BanTitle");        //读取称号违禁词
+            ConsoleOutput = config.get("ConsoleOutput");      //获取是否控制台输出
+            TitleLimit = config.get("TitleLimit");        //获取玩家自定义字数限制 
+            PlayerLog = config.get("PlayerLog");      //获取是否记录玩家操作日志
+            Advancements = config.get("Advancements");        //获取成就完成奖励称号
+            Economy = new gmoney(config.get("economy_type"), config.get("economy_name"));     //获取经济单位
+            EnabledChat = config.get("EnabledChat");        //获取是否启动聊天功能
             return out.success("§d[§eOneTitle§d] §r配置文件已重载");        //设置重载,这个没啥用
         }
         else {
+            AdvancementsTitle(ori.player);
             main(ori.player);
         }
     });
@@ -64,13 +91,46 @@ mc.listen("onServerStarted", () => {
     }
 
 });
-function hasShield(raw) {
-    let regex = new RegExp(BanTitle.join("|"));
+function hasShield(raw, item) {
+    let regex = new RegExp(item.join("|"));
     return regex.test(raw);
 }
 function logs(message) {
     let time = system.getTimeStr()
     fs.appendFileSync(logpath, `${time}${message}\n`);
+}
+function AdvancementsTitle(pl) {
+    let player = db.get(pl.xuid);
+    let players = db.get('Advancements');
+
+    if (!players) {
+        players = {};
+        db.set('Advancements', players);
+    }
+    if (!players.hasOwnProperty(pl.xuid)) {
+        players[pl.xuid] = [];
+        db.set('Advancements', players);
+    }
+    for (let key in Advancements) {
+        let item = AdvancementsAPI.CheckAdvancement(pl, key);
+
+        if (item == true) {
+            let targetObj = players[pl.xuid].find(obj => obj.Advancements == key);
+
+            if (!targetObj) {
+                pl.tell('§d[§eOneTitle§d] §r恭喜您完成:"' + key + '§r"奖励称号:"' + Advancements[key] + '"');
+                players[pl.xuid].push({
+                    "title": Advancements[key],
+                    "Advancements": key
+                });
+                db.set('Advancements', players);
+                player.push({
+                    "title": Advancements[key]
+                });
+                db.set(pl.xuid, player);
+            }
+        }
+    }
 }
 function main(pl) {     //主表单，这个经常要改我就不动了
     let fm = mc.newSimpleForm();
@@ -331,7 +391,7 @@ function addplayer(pl, pldt, item, type) {      //添加玩家称号
                 pl.tell('§d[§eOneTitle§d] §r余额不足' + moneyred + ':' + moneyname + '§r购买失败');
                 return;
             }
-            let items = hasShield(title);
+            let items = hasShield(title, BanTitle);
             if (items != false) {
                 addplayer(pl, pl, "输入的称号昵称包含违禁词,请重输", 1)
                 return;
@@ -536,7 +596,6 @@ function modifysplayer(pl, item, pldt) {
 
     pl.sendForm(fm, (pl, dt) => {
         if (dt == null) {
-            modifyplayer(pl)
             return;
         };
 
